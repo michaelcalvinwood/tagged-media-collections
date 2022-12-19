@@ -2,7 +2,6 @@ const mysql = require('./mysql');
 const axios = require('axios');
 require('dotenv').config();
 
-
 const resultIsCached = async (url, query) => {
     let info;
 
@@ -19,10 +18,12 @@ const resultIsCached = async (url, query) => {
     return JSON.parse(result);
 }
 
-exports.imageQuery = async (query, page = 1) => {
+exports.imageQuery = async (query, page = 1, per_page = 15) => {
     url = 'https://pixabay.com/api/';
 
-    let data = await resultIsCached(url, `${query}:${page}`);
+    let dbQuery = `${query}:${page}:${per_page}`;
+
+    let data = await resultIsCached(url, dbQuery);
 
     if (data === false) {
         const request = {
@@ -31,7 +32,7 @@ exports.imageQuery = async (query, page = 1) => {
             params: {
                 q: query,
                 orientation: "horizontal",
-                per_page: 100,
+                per_page,
                 page,
                 key: process.env.PIXABAY_KEY
             },
@@ -49,7 +50,7 @@ exports.imageQuery = async (query, page = 1) => {
         console.log('adding result to db');
     
         try {
-            await mysql.sqlQuery(`INSERT INTO query_cache (endpoint, query, result, ts) VALUES (${mysql.mysql.escape(url)}, ${mysql.mysql.escape(query)}, ${mysql.mysql.escape(JSON.stringify(data))}, ${Date.now()})`);
+            await mysql.sqlQuery(`INSERT INTO query_cache (endpoint, query, result, ts) VALUES (${mysql.mysql.escape(url)}, ${mysql.mysql.escape(dbQuery)}, ${mysql.mysql.escape(JSON.stringify(data))}, ${Date.now()})`);
         } catch (e) {
             console.error(e);
         }
@@ -76,10 +77,12 @@ exports.imageQuery = async (query, page = 1) => {
     return result;
 }
 
-exports.videoQuery = async (query, page = 1) => {
+exports.videoQuery = async (query, page = 1, per_page = 15) => {
     let url = 'https://pixabay.com/api/videos/';
 
-    let data = await resultIsCached(url, `${query}:${page}`);
+    let dbQuery = `${query}:${page}:${per_page}`;
+
+    let data = await resultIsCached(url, dbQuery);
 
     if (data === false) {
         const request = {
@@ -87,7 +90,7 @@ exports.videoQuery = async (query, page = 1) => {
             method: 'get',
             params: {
                 q: query,
-                per_page: 100,
+                per_page,
                 page,
                 key: process.env.PIXABAY_KEY
             },
@@ -105,7 +108,7 @@ exports.videoQuery = async (query, page = 1) => {
         console.log('adding result to db');
     
         try {
-            await mysql.sqlQuery(`INSERT INTO query_cache (endpoint, query, result, ts) VALUES (${mysql.mysql.escape(url)}, ${mysql.mysql.escape(query)}, ${mysql.mysql.escape(JSON.stringify(data))}, ${Date.now()})`);
+            await mysql.sqlQuery(`INSERT INTO query_cache (endpoint, query, result, ts) VALUES (${mysql.mysql.escape(url)}, ${mysql.mysql.escape(dbQuery)}, ${mysql.mysql.escape(JSON.stringify(data))}, ${Date.now()})`);
         } catch (e) {
             console.error(e);
         }
@@ -138,8 +141,6 @@ exports.videoQuery = async (query, page = 1) => {
 
         return { url, tags}
     })
-
-    console.log(result);
 
     return result;
 }

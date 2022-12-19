@@ -17,6 +17,7 @@ async function createTables () {
         url VARCHAR(512) NOT NULL,
         type VARCHAR(64) NOT NULL,
         tags VARCHAR(2048) DEFAULT '',
+        status VARCHAR(64) NOT NULL,
         PRIMARY KEY(uuid),
         UNIQUE INDEX(url)
     )`;
@@ -56,7 +57,7 @@ async function doIt () {
     
     await createTables();
 
-    await pixabay.imageQuery('cars');
+    await pixabay.videoQuery('cars');
 }
 
 doIt();

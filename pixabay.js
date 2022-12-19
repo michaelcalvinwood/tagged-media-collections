@@ -22,7 +22,7 @@ const resultIsCached = async (url, query) => {
 exports.imageQuery = async (query, page = 1) => {
     url = 'https://pixabay.com/api/';
 
-    let data = await resultIsCached(url, query);
+    let data = await resultIsCached(url, `${query}:${page}`);
 
     if (data === false) {
         const request = {
@@ -70,34 +70,76 @@ exports.imageQuery = async (query, page = 1) => {
 
         let tags = item.tags;
 
-        return { imageURL, tags }
+        return { url: imageURL, tags }
     })
 
-    console.log(result);
+    return result;
 }
 
 exports.videoQuery = async (query, page = 1) => {
-    const request = {
-        url: 'https://pixabay.com/api/videos/',
-        method: 'get',
-        params: {
-            q: query,
-            per_page: 200,
-            page,
-            key: process.env.PIXABAY_KEY
-        },
-        headers: { "Accept-Encoding": "gzip,deflate,compress" } 
+    let url = 'https://pixabay.com/api/videos/';
+
+    let data = await resultIsCached(url, `${query}:${page}`);
+
+    if (data === false) {
+        const request = {
+            url,
+            method: 'get',
+            params: {
+                q: query,
+                per_page: 100,
+                page,
+                key: process.env.PIXABAY_KEY
+            },
+            headers: { "Accept-Encoding": "gzip,deflate,compress" } 
+        }
+
+        try {
+            let response = await axios(request);
+            data = response.data;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    
+        console.log('adding result to db');
+    
+        try {
+            await mysql.sqlQuery(`INSERT INTO query_cache (endpoint, query, result, ts) VALUES (${mysql.mysql.escape(url)}, ${mysql.mysql.escape(query)}, ${mysql.mysql.escape(JSON.stringify(data))}, ${Date.now()})`);
+        } catch (e) {
+            console.error(e);
+        }
+    } else {
+        console.log('query is cached');
     }
 
-    let data;
+    const {totalHits, hits} = data;
 
-    try {
-        let response = await axios(request);
-        data = response.data;
-    } catch (e) {
-        console.error(e);
-        return false;
-    }
+    let result = hits.map(item => {
+        let size = item.videos.large.width;
+        let url = item.videos.large.url;
 
-    console.log(data);
+        if (size > 1920 && item.videos.medium.width >= 1920) {
+            size = item.videos.medium.width;
+            url = item.videos.medium.url;
+        }
+
+        if (size > 1920 && item.videos.small.width >= 1920) {
+            size = item.videos.small.width;
+            url = item.videos.small.url;
+        }
+
+        if (size > 1920 && item.videos.tiny.width >= 1920) {
+            size = item.videos.tiny.width;
+            url = item.videos.tiny.url;
+        }
+
+        let tags = item.tags;
+
+        return { url, tags}
+    })
+
+    console.log(result);
+
+    return result;
 }

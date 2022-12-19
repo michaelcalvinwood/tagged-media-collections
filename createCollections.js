@@ -1,13 +1,7 @@
 let pixabay = require('./pixabay');
 let mysql = require('./mysql');
 
-
-
-
-
-
-
-async function doIt () {
+async function createTables () {
     let query = `CREATE TABLE IF NOT EXISTS query_cache (
         endpoint VARCHAR(512) NOT NULL,
         query VARCHAR(256) NOT NULL,
@@ -17,6 +11,50 @@ async function doIt () {
     ) ENGINE=InnoDB`;
 
     await mysql.sqlQuery(query);
+
+    query = `CREATE TABLE IF NOT EXISTS media_id (
+        uuid VARCHAR(128) NOT NULL,
+        url VARCHAR(512) NOT NULL,
+        type VARCHAR(64) NOT NULL,
+        tags VARCHAR(2048) DEFAULT '',
+        PRIMARY KEY(uuid),
+        UNIQUE INDEX(url)
+    )`;
+
+    await mysql.sqlQuery(query);
+
+    query = `CREATE TABLE IF NOT EXISTS image_tags (
+        tag VARCHAR(128) NOT NULL,
+        uuid VARCHAR(128) NOT NULL,
+        PRIMARY KEY (tag, uuid),
+        INDEX(tag)
+    )`
+
+    await mysql.sqlQuery(query);
+
+    query = `CREATE TABLE IF NOT EXISTS video_tags (
+        tag VARCHAR(128) NOT NULL,
+        uuid VARCHAR(128) NOT NULL,
+        PRIMARY KEY (tag, uuid),
+        INDEX(tag)
+    )`
+
+    await mysql.sqlQuery(query);
+
+    query = `CREATE TABLE IF NOT EXISTS media_collections (
+        name VARCHAR(128) NOT NULL,
+        ids MEDIUMTEXT NOT NULL,
+        tags VARCHAR(2048),
+        PRIMARY KEY(name)
+    )`
+
+    await mysql.sqlQuery(query);
+
+}
+
+async function doIt () {
+    
+    await createTables();
 
     await pixabay.imageQuery('cars');
 }
